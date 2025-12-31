@@ -6,16 +6,10 @@ public class GameClockController : MonoBehaviour
     public static GameClockController Instance;
 
     [Header("Time Settings")]
-    private const float REAL_SECONDS_PER_INGAME_DAY = 100f; // später 500f oder länger
-
-    private const float NPC_START_HOUR = 2.5f;     // NPCs starten zu dieser Stunde
-    private const float FREEZE_AT_HOUR = 7f;       // Uhr wird bei 7 Uhr gestoppt
-    private const float SHOW_TIME_SEVEN = 3f;      // optionale kurze Anzeige
+    private const float REAL_SECONDS_PER_INGAME_DAY = 100f;
 
     private float day;
     private bool timeFrozen = false;
-    private bool eventStarted = false;
-    private bool timeShown = false;
 
     [Header("Clock Hands")]
     public Transform clockHourHandTransform;
@@ -37,55 +31,31 @@ public class GameClockController : MonoBehaviour
     }
 
     private void Update()
+{
+    // Uhr nur laufen lassen, wenn keine Quest aktiv ist, die die Zeit stoppen soll
+    bool anyQuestActive = false;
+    if (QuestManager.Instance != null)
     {
-        float timeOfDay = GetTimeOfDay();
-        // Uhr läuft nur, solange sie nicht eingefroren wurde
-        if (!timeFrozen)
+        foreach (var q in QuestManager.Instance.quests)
         {
-            day += Time.deltaTime / REAL_SECONDS_PER_INGAME_DAY;
-        }
-
-        UpdateClockHands(timeOfDay);
-
-        // NPCs starten
-        if (!eventStarted && timeOfDay >= NPC_START_HOUR)
-        {
-            eventStarted = true;
-            StartCoroutine(StartNPCsRoutine());
-        }
-
-        // Kurze Anzeige bei SHOW_TIME_SEVEN (optional)
-        if (!timeShown && timeOfDay >= SHOW_TIME_SEVEN)
-        {
-            timeShown = true;
-            StartCoroutine(ShowTimeRoutine());
-        }
-
-        // Uhr stoppen bei FREEZE_AT_HOUR
-        if (!timeFrozen && timeOfDay >= SHOW_TIME_SEVEN)
-        {
-            timeFrozen = true;
-            if (siebenUhr != null)
-                siebenUhr.SetActive(true);
-
-            // 7-Uhr-Quest starten ohne LINQ
-            if (QuestManager.Instance != null)
+            if (q.state == QuestState.Active)
             {
-                foreach (var q in QuestManager.Instance.quests)
-                {
-                    float tolerance = 0.01f;
-                    if (q.autoStart && q.state == QuestState.Inactive && Mathf.Abs(q.startHour - SHOW_TIME_SEVEN) < tolerance)
-                    {
-                        q.StartQuest();
-
-                        
-
-                        Debug.Log("7-Uhr-Quest gestartet, Zeit pausiert");
-                    }
-                }
+                anyQuestActive = true;
+                break;
             }
         }
     }
+
+    timeFrozen = anyQuestActive;
+
+    if (!timeFrozen)
+    {
+        day += Time.deltaTime / REAL_SECONDS_PER_INGAME_DAY;
+    }
+
+    UpdateClockHands(GetTimeOfDay());
+}
+
 
     private void UpdateClockHands(float timeOfDay)
     {
@@ -99,28 +69,9 @@ public class GameClockController : MonoBehaviour
             clockMinuteHandTransform.eulerAngles = new Vector3(0, 0, -(minutes / 60f * 360f));
     }
 
-    private IEnumerator StartNPCsRoutine()
-    {
-        foreach (var npc in FindObjectsOfType<NPCMovementController>())
-        {
-            npc.StartNPC();
-        }
-        yield break;
-    }
-
-    private IEnumerator ShowTimeRoutine()
-    {
-        if (siebenUhr != null)
-            siebenUhr.SetActive(true);
-        yield return new WaitForSeconds(2f);
-        if (siebenUhr != null)
-            siebenUhr.SetActive(false);
-    }
-
     public float GetTimeOfDay()
     {
-        float dayNormalized = day % 1f;
-        return dayNormalized * 24f;
+        return (day % 1f) * 24f;
     }
 
     public void FreezeTime(bool freeze)
