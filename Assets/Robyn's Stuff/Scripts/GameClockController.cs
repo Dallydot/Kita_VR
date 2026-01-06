@@ -7,9 +7,11 @@ public class GameClockController : MonoBehaviour
 
     [Header("Time Settings")]
     private const float REAL_SECONDS_PER_INGAME_DAY = 100f;
+    private const float NPC_START_HOUR = 2.5f;
 
     private float day;
     private bool timeFrozen = false;
+    private bool eventStarted = false;
 
     [Header("Clock Hands")]
     public Transform clockHourHandTransform;
@@ -21,6 +23,7 @@ public class GameClockController : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+
         if (siebenUhr != null)
             siebenUhr.SetActive(false);
 
@@ -31,31 +34,55 @@ public class GameClockController : MonoBehaviour
     }
 
     private void Update()
-{
-    // Uhr nur laufen lassen, wenn keine Quest aktiv ist, die die Zeit stoppen soll
-    bool anyQuestActive = false;
-    if (QuestManager.Instance != null)
     {
-        foreach (var q in QuestManager.Instance.quests)
+        // Prüfen, ob eine Quest aktiv ist → Zeit stoppen
+        bool anyQuestActive = false;
+        if (QuestManager.Instance != null)
         {
-            if (q.state == QuestState.Active)
+            foreach (var q in QuestManager.Instance.quests)
             {
-                anyQuestActive = true;
-                break;
+                if (q.state == QuestState.Active)
+                {
+                    anyQuestActive = true;
+                    break;
+                }
             }
+        }
+
+        timeFrozen = anyQuestActive;
+
+        if (!timeFrozen)
+        {
+            day += Time.deltaTime / REAL_SECONDS_PER_INGAME_DAY;
+        }
+
+        float timeOfDay = GetTimeOfDay();
+        UpdateClockHands(timeOfDay);
+
+        // NPCs zur richtigen Zeit starten
+        if (!eventStarted && timeOfDay >= NPC_START_HOUR)
+        {
+            StartNPCs();
         }
     }
 
-    timeFrozen = anyQuestActive;
-
-    if (!timeFrozen)
+    public void StartNPCs()
     {
-        day += Time.deltaTime / REAL_SECONDS_PER_INGAME_DAY;
+        if (eventStarted) return;
+
+        eventStarted = true;
+        StartCoroutine(StartNPCsRoutine());
+        Debug.Log("NPCs wurden gestartet");
     }
 
-    UpdateClockHands(GetTimeOfDay());
-}
-
+    private IEnumerator StartNPCsRoutine()
+    {
+        foreach (var npc in FindObjectsOfType<NPCMovementController>())
+        {
+            npc.StartNPC();
+        }
+        yield break;
+    }
 
     private void UpdateClockHands(float timeOfDay)
     {
@@ -63,10 +90,12 @@ public class GameClockController : MonoBehaviour
         float minutes = (timeOfDay - Mathf.Floor(timeOfDay)) * 60f;
 
         if (clockHourHandTransform != null)
-            clockHourHandTransform.eulerAngles = new Vector3(0, 0, -120 + (-hours / 12f * 360f));
+            clockHourHandTransform.eulerAngles =
+                new Vector3(0, 0, -120 + (-hours / 12f * 360f));
 
         if (clockMinuteHandTransform != null)
-            clockMinuteHandTransform.eulerAngles = new Vector3(0, 0, -(minutes / 60f * 360f));
+            clockMinuteHandTransform.eulerAngles =
+                new Vector3(0, 0, -(minutes / 60f * 360f));
     }
 
     public float GetTimeOfDay()

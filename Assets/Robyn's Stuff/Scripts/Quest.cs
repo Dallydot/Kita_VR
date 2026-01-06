@@ -43,6 +43,10 @@ public class Quest : ScriptableObject
         if (state != QuestState.Active) return;
         state = QuestState.Completed;
         Debug.Log("Quest abgeschlossen: " + questName);
+        if (requiresNPCClicks)
+        {
+            GameClockController.Instance.StartNPCs();
+        }
     }
 
     public void ResetQuest()
