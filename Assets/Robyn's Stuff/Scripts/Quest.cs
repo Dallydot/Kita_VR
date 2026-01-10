@@ -28,6 +28,10 @@ public class Quest : ScriptableObject
     [HideInInspector] public int totalNPCs = 0;
     [HideInInspector] public int clickedNPCs = 0;
 
+    [Header("PickUp-Quest")]
+    public bool requiresItemPlacement = false;
+    public string requiredItemTag = "";
+
     public void StartQuest()
     {
         if (state != QuestState.Inactive) return;
@@ -88,5 +92,10 @@ public class Quest : ScriptableObject
         {
             QuestManager.Instance.QuestCompleted(this);
         }
+    }
+
+    public void PickUpItem()
+    {
+        if (state != QuestState.Active || !requiresItemPlacement) return;
     }
 }
