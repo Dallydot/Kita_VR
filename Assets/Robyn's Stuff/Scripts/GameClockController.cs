@@ -31,6 +31,7 @@ public class GameClockController : MonoBehaviour
             clockHourHandTransform = transform.Find("hourHand");
         if (clockMinuteHandTransform == null)
             clockMinuteHandTransform = transform.Find("minuteHand");
+        Debug.Log("Clock Awake");
     }
 
     private void Update()

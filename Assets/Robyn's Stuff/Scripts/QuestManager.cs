@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class QuestManager : MonoBehaviour
@@ -8,13 +9,16 @@ public class QuestManager : MonoBehaviour
     private GameClockController clock;
 
     [Header("UI")]
-    public GameObject questText;
+    public GameObject questStartText;
+    public GameObject questEndText;
+    public float delayTime = 2f;
 
     private void Awake()
     {
+        Debug.Log("Clock gefunden: " + clock);
         Instance = this;
-        if (questText != null)
-            questText.SetActive(false);
+        if (questStartText != null)
+            questStartText.SetActive(false);
 
         clock = FindObjectOfType<GameClockController>();
 
@@ -26,6 +30,13 @@ public class QuestManager : MonoBehaviour
 
     private void Update()
     {
+        
+        if (clock == null)
+        {
+            clock = FindObjectOfType<GameClockController>();
+            if (clock == null) return; // nichts tun solange keine clock
+        }
+
         float timeOfDay = clock.GetTimeOfDay();
 
         foreach (Quest q in quests)
@@ -43,8 +54,11 @@ public class QuestManager : MonoBehaviour
 
         quest.StartQuest();
 
-        if (questText != null)
-            questText.SetActive(true);
+        if (questStartText != null)
+            questStartText.SetActive(true);
+        
+        if (questEndText != null)
+            questEndText.SetActive(false);
 
         if (clock != null)
             clock.FreezeTime(true);
@@ -52,8 +66,12 @@ public class QuestManager : MonoBehaviour
 
     public void QuestCompleted(Quest quest)
     {
-        if (questText != null)
-            questText.SetActive(false);
+        if (questStartText != null)
+            questStartText.SetActive(false);
+        
+        if (questEndText != null)
+            questEndText.SetActive(true);
+            StartCoroutine(DelayAction(delayTime));
 
         quest.CompleteQuest();
 
@@ -67,5 +85,13 @@ public class QuestManager : MonoBehaviour
             if (q.state == QuestState.Active)
                 return q;
         return null;
+    }
+
+    IEnumerator DelayAction(float delayTime)
+    {
+    //Wait for the specified delay time before continuing.
+    yield return new WaitForSeconds(delayTime);
+
+    //Do the action after the delay time has finished.
     }
 }
